@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>MiniGPT-PRO | Mobile AI</title>
+    
+    <!-- Bootstrap 5.3 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bs-dark);
+        }
+
+        /* Messages Container */
+        .messages-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: rgba(0,0,0,0.3);
+            scroll-behavior: smooth;
+        }
+
+        .messages-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Message Bubbles */
+        .message {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-user {
+            justify-content: flex-end;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .message-avatar.user {
+            background: var(--bs-primary);
+        }
+
+        .message-avatar.bot {
+            background: rgba(var(--bs-primary-rgb), 0.25);
+        }
+
+        .message-content {
+            max-width: 85%;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .message-bubble {
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid var(--bs-border-color);
+            word-break: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.5;
+            font-size: 0.95rem;
+        }
+
+        .message-bubble.user {
+            background: rgba(var(--bs-primary-rgb), 0.1);
+            border-color: rgba(var(--bs-primary-rgb), 0.25);
+        }
+
+        .message-bubble.bot {
+            background: rgba(0,0,0,0.25);
+        }
+
+        /* Code Blocks */
+        pre {
+            max-width: 100%;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background: rgba(0,0,0,0.5);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 0.75rem 0;
+            border: 1px solid var(--bs-border-color);
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        code {
+            font-family: 'Courier New', monospace;
+            background: rgba(0,0,0,0.5);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-size: 0.85rem;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
+        /* Model Indicator */
+        .model-indicator {
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 0.25rem 0.75rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            background: rgba(var(--bs-primary-rgb), 0.1);
+            border: 1px solid rgba(var(--bs-primary-rgb), 0.3);
+        }
+
+        .model-indicator:hover {
+            background: rgba(var(--bs-primary-rgb), 0.2);
+        }
+
+        /* Quick Tools */
+        .quick-tool {
+            transition: all 0.2s;
+            flex: 1;
+            text-decoration: none;
+            color: var(--bs-secondary) !important;
+        }
+
+        .quick-tool:hover {
+            color: var(--bs-primary) !important;
+            transform: translateY(-2px);
+        }
+
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.25rem 0;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background-color: var(--bs-secondary);
+            border-radius: 50%;
+            display: inline-block;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.3; }
+            30% { transform: translateY(-10px); opacity: 1; }
+        }
+
+        /* Modal Bottom Sheet */
+        .modal-dialog-bottom {
+            margin: 0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 80vh;
+        }
+
+        .modal-content {
+            border-radius: 20px 20px 0 0;
+            border: 1px solid var(--bs-border-color);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bs-secondary);
+            border-radius: 4px;
+        }
+
+        /* History Items */
+        .history-item {
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border: 1px solid transparent;
+        }
+
+        .history-item:hover {
+            background: rgba(var(--bs-primary-rgb), 0.1);
+            border-color: rgba(var(--bs-primary-rgb), 0.2);
+        }
+
+        /* Input Area */
+        textarea {
+            background: transparent !important;
+            border: none !important;
+            color: var(--bs-light) !important;
+            resize: none;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            line-height: 1.5;
+            max-height: 120px;
+        }
+
+        textarea:focus {
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+        textarea::placeholder {
+            color: var(--bs-secondary);
+        }
+
+        .btn-send {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--bs-primary);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-send:hover:not(:disabled) {
+            transform: scale(1.05);
+            background: #0b5ed7;
+        }
+
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Toast Notifications */
+        .toast-notification {
+            position: fixed;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            color: white;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideDown 0.3s ease;
+        }
+
+        .toast-success { background: #198754; }
+        .toast-error { background: #dc3545; }
+        .toast-info { background: #0dcaf0; }
+
+        @keyframes slideDown {
+            from {
+                transform: translate(-50%, -100%);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, 0);
+                opacity: 1;
+            }
+        }
+
+        /* Lists */
+        .message-bubble ul, 
+        .message-bubble ol {
+            padding-left: 1.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .message-bubble li {
+            margin-bottom: 0.25rem;
+        }
+
+        .message-bubble p {
+            margin-bottom: 0.5rem;
+        }
+
+        .message-bubble p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 576px) {
+            .message-content {
+                max-width: 90%;
+            }
+            
+            .quick-tool small {
+                font-size: 0.6rem !important;
+            }
+            
+            .model-chip {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="container-fluid p-0 h-100 d-flex flex-column bg-dark">
+        
+        <!-- Header -->
+        <div class="bg-black bg-opacity-50 px-3 py-2 border-bottom border-secondary d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-link text-light p-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#historyDrawer">
+                    <i class="fas fa-bars fs-5"></i>
+                </button>
+                <div>
+                    <h5 class="mb-0 fw-semibold">
+                        <i class="fas fa-robot text-primary me-2"></i>
+                        MiniGPT
+                    </h5>
+                    <small class="text-secondary" id="statusText">
+                        <i class="fas fa-circle text-success me-1" style="font-size: 6px;"></i>
+                        Ready
+                    </small>
+                </div>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <!-- Model Indicator -->
+                <span class="model-indicator text-primary" data-bs-toggle="modal" data-bs-target="#settingsModal" style="cursor: pointer;" role="button">
+                    <i class="fas fa-microchip me-1"></i>
+                    <span id="currentModelName">Step 3.5 Flash</span>
+                    <i class="fas fa-chevron-down ms-1" style="font-size: 10px;"></i>
+                </span>
+                <button class="btn btn-link text-light p-1" data-bs-toggle="modal" data-bs-target="#settingsModal" type="button">
+                    <i class="fas fa-sliders-h"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages Container -->
+        <div class="messages-container" id="messagesContainer">
+            <div class="messages-wrapper" id="messagesWrapper">
+                <!-- Messages will be inserted here -->
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="bg-black bg-opacity-75 border-top border-secondary px-3 py-2">
+            <div class="mx-auto" style="max-width: 600px;">
+                <!-- Quick Tools -->
+                <div class="d-flex gap-3 mb-2 px-2" id="quickTools">
+                    <button class="btn btn-link p-0 quick-tool" data-tool="analyze">
+                        <i class="fas fa-search fs-6"></i>
+                        <small class="d-block" style="font-size: 10px;">Analyze</small>
+                    </button>
+                    <button class="btn btn-link p-0 quick-tool" data-tool="summarize">
+                        <i class="fas fa-compress fs-6"></i>
+                        <small class="d-block" style="font-size: 10px;">Summarize</small>
+                    </button>
+                    <button class="btn btn-link p-0 quick-tool" data-tool="translate">
+                        <i class="fas fa-language fs-6"></i>
+                        <small class="d-block" style="font-size: 10px;">Translate</small>
+                    </button>
+                    <button class="btn btn-link p-0 quick-tool" data-tool="code">
+                        <i class="fas fa-code fs-6"></i>
+                        <small class="d-block" style="font-size: 10px;">Code</small>
+                    </button>
+                    <button class="btn btn-link p-0 quick-tool" data-tool="explain">
+                        <i class="fas fa-graduation-cap fs-6"></i>
+                        <small class="d-block" style="font-size: 10px;">Explain</small>
+                    </button>
+                </div>
+
+                <!-- Input Row -->
+                <div class="d-flex gap-2 align-items-end">
+                    <div class="flex-grow-1 position-relative">
+                        <textarea 
+                            class="form-control bg-black bg-opacity-50 border-secondary text-light rounded-4" 
+                            id="userInput" 
+                            rows="1"
+                            placeholder="Ask anything..."
+                        ></textarea>
+                    </div>
+                    <button class="btn-send" id="sendButton" disabled>
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+
+                <!-- Token Counter -->
+                <div class="d-flex justify-content-between mt-2 px-2">
+                    <small class="text-secondary" id="tokenCounter">0 tokens</small>
+                    <small class="text-secondary" id="wordCounter">0 words</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Drawer -->
+    <div class="offcanvas offcanvas-start bg-black" tabindex="-1" id="historyDrawer">
+        <div class="offcanvas-header border-bottom border-secondary">
+            <h5 class="offcanvas-title">
+                <i class="fas fa-history me-2 text-primary"></i>
+                Conversations
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <div class="p-3 border-bottom border-secondary">
+                <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 py-2" id="newChatBtn">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>New Chat</span>
+                </button>
+            </div>
+            <div class="p-3" id="historyList">
+                <!-- History will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-bottom">
+            <div class="modal-content bg-black border-secondary">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cog me-2 text-primary"></i>
+                        Settings
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Model Selection Dropdown -->
+                    <div class="mb-4">
+                        <label class="form-label text-secondary">
+                            <i class="fas fa-microchip me-2"></i>Model
+                        </label>
+                        <select class="form-select bg-dark border-secondary text-light" id="modelSelect">                          
+                            <option value="nvidia/nemotron-3-super-120b-a12b:free">NVIDIA: Nemotron 3 Super (free)</option>
+                            <option value="qwen/qwen3-next-80b-a3b-instruct:free">Qwen: Qwen3 Next 80B A3B Instruct (free)</option>
+                            <option value="qwen/qwen3-coder:free">Qwen: Qwen3 Coder 480B A35B (free)</option>
+                            <option value="stepfun/step-3.5-flash:free" selected>StepFun: Step 3.5 Flash (free)</option>
+                            <option value="nvidia/nemotron-3-nano-30b-a3b:free">NVIDIA: Nemotron 3 Nano 30B A3B (free)</option>
+                            <option value="minimax/minimax-m2.5:free">MiniMax: MiniMax M2.5 (free)</option>
+                            <option value="nvidia/llama-nemotron-embed-vl-1b-v2:free">NVIDIA: Llama Nemotron Embed VL 1B V2 (free)</option>
+                            <option value="arcee-ai/trinity-mini:free">Arcee AI: Trinity Mini (free)</option>
+                            <option value="openai/gpt-oss-120b:free">OpenAI: gpt-oss-120b (free)</option>
+                            <option value="openai/gpt-oss-20b:free">OpenAI: gpt-oss-20b (free)</option>
+                            <option value="z-ai/glm-4.5-air:free">Z.ai: GLM 4.5 Air (free)</option>                            
+                            <option value="google/gemma-3-27b-it:free">Google: Gemma 3 27B (free)</option>
+                            <option value="meta-llama/llama-3.2-3b-instruct:free">Meta: Llama 3.2 3B Instruct (free)</option>
+                            <option value="nousresearch/hermes-3-llama-3.1-405b:free">Nous: Hermes 3 405B Instruct (free)</option>
+                            <option value="arcee-ai/trinity-large-preview:free">Arcee AI: Trinity Large Preview (free)</option>                            
+                            <option value="nvidia/nemotron-nano-12b-v2-vl:free">NVIDIA: Nemotron Nano 12B 2 VL (free)</option>
+                            <option value="nvidia/nemotron-nano-9b-v2:free">NVIDIA: Nemotron Nano 9B V2 (free)</option>
+                            <option value="mistralai/mistral-small-3.1-24b-instruct:free">Mistral: Mistral Small 3.1 24B (free)</option>
+                            <option value="qwen/qwen3-4b:free">Qwen: Qwen3 4B (free)</option>                            
+                            <option value="liquid/lfm-2.5-1.2b-thinking:free">LiquidAI: LFM2.5-1.2B-Thinking (free)</option>
+                            <option value="liquid/lfm-2.5-1.2b-instruct:free">LiquidAI: LFM2.5-1.2B-Instruct (free)</option>                            
+                            <option value="cognitivecomputations/dolphin-mistral-24b-venice-edition:free">Venice: Uncensored (free)</option>
+                            <option value="google/gemma-3-4b-it:free">Google: Gemma 3 4B (free)</option>                            
+                            <option value="google/gemma-3-12b-it:free">Google: Gemma 3 12B (free)</option>
+                            <option value="google/gemma-3n-e2b-it:free">Google: Gemma 3n 2B (free)</option>                            
+                            <option value="google/gemma-3n-e4b-it:free">Google: Gemma 3n 4B (free)</option>
+                            <option value="openrouter/free">Free Models Router</option>                            
+                            <option value="openrouter/auto">Auto Router</option>
+                            <option value="openrouter/hunter-alpha">Hunter Alpha</option>
+                        </select>
+                    </div>
+
+                    <!-- API Key Input -->
+                    <div class="mb-3">
+                        <label class="form-label text-secondary">
+                            <i class="fas fa-key me-2"></i>OpenRouter API Key
+                        </label>
+                        <div class="input-group">
+                            <input type="password" class="form-control bg-dark border-secondary text-light" id="apiKeyInput" placeholder="sk-...">
+                            <button class="btn btn-outline-secondary border-secondary" type="button" id="toggleApiKey">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <small class="text-secondary">Get your key at <a href="https://openrouter.ai" target="_blank" class="text-primary">openrouter.ai</a></small>
+                    </div>
+
+                    <!-- Temperature -->
+                    <div class="mb-3">
+                        <label class="form-label text-secondary">
+                            <i class="fas fa-thermometer-half me-2"></i>Temperature: <span id="tempValue">0.7</span>
+                        </label>
+                        <input type="range" class="form-range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+                        <div class="d-flex justify-content-between">
+                            <small>Precise</small>
+                            <small>Balanced</small>
+                            <small>Creative</small>
+                        </div>
+                    </div>
+
+                    <!-- Max Tokens -->
+                    <div class="mb-3">
+                        <label class="form-label text-secondary">
+                            <i class="fas fa-maximize me-2"></i>Max Tokens
+                        </label>
+                        <select class="form-select bg-dark border-secondary text-light" id="maxTokens">
+                            <option value="500">500 (Short)</option>
+                            <option value="1000" selected>1000 (Medium)</option>
+                            <option value="2000">2000 (Long)</option>
+                            <option value="4000">4000 (Very Long)</option>
+                        </select>
+                    </div>
+
+                    <!-- System Prompt -->
+                    <div class="mb-3">
+                        <label class="form-label text-secondary">
+                            <i class="fas fa-terminal me-2"></i>System Prompt
+                        </label>
+                        <textarea class="form-control bg-dark border-secondary text-light" id="systemPrompt" rows="2">You are a helpful AI assistant.</textarea>
+                    </div>
+
+                    <!-- Reset Settings Button -->
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-danger w-50" id="resetSettingsBtn">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </button>
+                        <button class="btn btn-primary w-50" id="saveSettings">
+                            <i class="fas fa-save me-2"></i>Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
